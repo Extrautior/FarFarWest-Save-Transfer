@@ -9,15 +9,17 @@ The game save encryption appears to use the save filename / SteamID as part of i
 ## Features
 
 - Modern Windows-style UI built with CustomTkinter
-- Sidebar navigation for transfer, account selection, runtime inventory editing, and activity logs
+- Sidebar navigation for transfer, runtime inventory editing, and activity logs
 - Command-line mode for advanced users
 - Source SteamID detection from `.save` filename
 - Local Steam account discovery from `loginusers.vdf`
 - SteamID discovery from existing Far Far West save filenames
 - Steam profile URL / vanity name resolution
 - Steam account avatars where Steam Community profile data is available
+- Account picker embedded directly in the transfer screen
 - Real runtimeInventory editor for editable integer values found in the decrypted save
 - Category filters for currency, items, fragments, jokers, skins, mounts, quests, music, map, and other values
+- Category rail with counts and grouped editor rows
 - Safe backup creation before overwriting existing edited output
 - Re-encrypts transferred saves for the target Steam account
 - Writes a new output file instead of overwriting the original

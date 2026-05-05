@@ -18,13 +18,13 @@ from PIL import Image, ImageDraw
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-APP_BG = "#0b1020"
-PANEL = "#111827"
-PANEL_2 = "#172033"
-CARD = "#1f2a44"
+APP_BG = "#070b16"
+PANEL = "#0f172a"
+PANEL_2 = "#162033"
+CARD = "#1e293b"
 TEXT = "#f8fafc"
 MUTED = "#94a3b8"
-ACCENT = "#3b82f6"
+ACCENT = "#6366f1"
 GREEN = "#22c55e"
 RED = "#ef4444"
 
@@ -33,8 +33,8 @@ class App(ctk.CTk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Far Far West Save Studio")
-        self.geometry("1180x760")
-        self.minsize(1040, 680)
+        self.geometry("1220x780")
+        self.minsize(1080, 700)
         self.configure(fg_color=APP_BG)
 
         self.queue: queue.Queue[tuple[str, object]] = queue.Queue()
@@ -59,10 +59,10 @@ class App(ctk.CTk):
         self.profile_input = ctk.StringVar()
         self.editor_search = ctk.StringVar()
         self.editor_category = ctk.StringVar(value="All")
+        self.category_buttons: dict[str, ctk.CTkButton] = {}
 
         self._build_shell()
         self._build_transfer()
-        self._build_accounts()
         self._build_editor()
         self._build_log()
         self.refresh_accounts()
@@ -72,20 +72,20 @@ class App(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        side = ctk.CTkFrame(self, width=250, corner_radius=0, fg_color="#080d1a")
+        side = ctk.CTkFrame(self, width=232, corner_radius=0, fg_color="#050816")
         side.grid(row=0, column=0, sticky="nsew")
         side.grid_rowconfigure(7, weight=1)
 
-        ctk.CTkLabel(side, text="Far Far West", font=("Segoe UI", 24, "bold"), text_color=TEXT).grid(row=0, column=0, sticky="w", padx=24, pady=(28, 0))
-        ctk.CTkLabel(side, text="Save Studio", font=("Segoe UI", 18), text_color=MUTED).grid(row=1, column=0, sticky="w", padx=24, pady=(0, 28))
+        ctk.CTkLabel(side, text="Far Far West", font=("Segoe UI Variable Display", 23, "bold"), text_color=TEXT).grid(row=0, column=0, sticky="w", padx=24, pady=(30, 0))
+        ctk.CTkLabel(side, text="Save Studio", font=("Segoe UI", 15), text_color=MUTED).grid(row=1, column=0, sticky="w", padx=24, pady=(0, 30))
 
         self.nav_buttons: dict[str, ctk.CTkButton] = {}
-        for i, name in enumerate(("Transfer", "Accounts", "Editor", "Activity"), start=2):
+        for i, name in enumerate(("Transfer", "Editor", "Activity"), start=2):
             self.nav_buttons[name] = ctk.CTkButton(
                 side,
                 text=name,
-                height=44,
-                corner_radius=12,
+                height=46,
+                corner_radius=14,
                 anchor="w",
                 fg_color="transparent",
                 hover_color=PANEL_2,
@@ -103,7 +103,7 @@ class App(ctk.CTk):
         header = ctk.CTkFrame(self.content, fg_color=APP_BG)
         header.grid(row=0, column=0, sticky="ew", padx=30, pady=(24, 10))
         header.grid_columnconfigure(0, weight=1)
-        self.page_title = ctk.CTkLabel(header, text="Transfer", font=("Segoe UI", 30, "bold"), text_color=TEXT)
+        self.page_title = ctk.CTkLabel(header, text="Transfer", font=("Segoe UI Variable Display", 30, "bold"), text_color=TEXT)
         self.page_title.grid(row=0, column=0, sticky="w")
         self.status = ctk.CTkLabel(header, text="Ready", text_color=MUTED)
         self.status.grid(row=0, column=1, sticky="e")
@@ -113,7 +113,7 @@ class App(ctk.CTk):
         self.pages.grid_columnconfigure(0, weight=1)
         self.pages.grid_rowconfigure(0, weight=1)
         self.page_frames: dict[str, ctk.CTkFrame] = {}
-        for name in ("Transfer", "Accounts", "Editor", "Activity"):
+        for name in ("Transfer", "Editor", "Activity"):
             frame = ctk.CTkFrame(self.pages, fg_color=APP_BG, corner_radius=0)
             frame.grid(row=0, column=0, sticky="nsew")
             self.page_frames[name] = frame
@@ -126,28 +126,28 @@ class App(ctk.CTk):
             button.configure(fg_color=ACCENT if key == name else "transparent")
 
     def card(self, parent: ctk.CTkFrame, **grid: object) -> ctk.CTkFrame:
-        frame = ctk.CTkFrame(parent, fg_color=PANEL, corner_radius=18, border_width=1, border_color="#243047")
+        frame = ctk.CTkFrame(parent, fg_color=PANEL, corner_radius=24, border_width=1, border_color="#1f2a44")
         frame.grid(**grid)
         return frame
 
     def field(self, parent: ctk.CTkFrame, row: int, label: str, var: ctk.StringVar, button: str | None = None, command: object | None = None) -> None:
-        ctk.CTkLabel(parent, text=label, text_color=MUTED, font=("Segoe UI", 13, "bold")).grid(row=row, column=0, columnspan=2, sticky="w", padx=18, pady=(14, 5))
-        entry = ctk.CTkEntry(parent, textvariable=var, height=42, corner_radius=12, fg_color="#0c1324", border_color="#26324a")
+        ctk.CTkLabel(parent, text=label, text_color=MUTED, font=("Segoe UI", 12, "bold")).grid(row=row, column=0, columnspan=2, sticky="w", padx=20, pady=(12, 5))
+        entry = ctk.CTkEntry(parent, textvariable=var, height=42, corner_radius=14, fg_color="#0a1020", border_color="#22304a")
         entry.grid(row=row + 1, column=0, sticky="ew", padx=(18, 8), pady=(0, 4))
         if button:
-            ctk.CTkButton(parent, text=button, height=42, corner_radius=12, command=command).grid(row=row + 1, column=1, sticky="ew", padx=(0, 18), pady=(0, 4))
+            ctk.CTkButton(parent, text=button, height=42, corner_radius=14, command=command).grid(row=row + 1, column=1, sticky="ew", padx=(0, 18), pady=(0, 4))
 
     def _build_transfer(self) -> None:
         page = self.page_frames["Transfer"]
-        page.grid_columnconfigure(0, weight=2)
-        page.grid_columnconfigure(1, weight=1)
+        page.grid_columnconfigure(0, weight=5)
+        page.grid_columnconfigure(1, weight=3)
         page.grid_rowconfigure(0, weight=1)
 
         left = self.card(page, row=0, column=0, sticky="nsew", padx=(0, 18))
         left.grid_columnconfigure(0, weight=1)
         left.grid_columnconfigure(1, minsize=150)
-        ctk.CTkLabel(left, text="Move a save to another Steam account", font=("Segoe UI", 20, "bold"), text_color=TEXT).grid(row=0, column=0, columnspan=2, sticky="w", padx=18, pady=(18, 4))
-        ctk.CTkLabel(left, text="Choose the old save, pick a target SteamID, and generate a new encrypted save.", text_color=MUTED).grid(row=1, column=0, columnspan=2, sticky="w", padx=18, pady=(0, 10))
+        ctk.CTkLabel(left, text="Move a save to another Steam account", font=("Segoe UI Variable Display", 21, "bold"), text_color=TEXT).grid(row=0, column=0, columnspan=2, sticky="w", padx=20, pady=(20, 4))
+        ctk.CTkLabel(left, text="Choose the old save, pick a target SteamID, and generate a new encrypted save.", text_color=MUTED).grid(row=1, column=0, columnspan=2, sticky="w", padx=20, pady=(0, 10))
         self.field(left, 2, "Old save file", self.source_save, "Browse", self.browse_source)
         self.field(left, 4, "Source SteamID64", self.source_steamid, "From filename", self.source_from_filename)
         self.field(left, 6, "Target SteamID64", self.target_steamid)
@@ -155,32 +155,24 @@ class App(ctk.CTk):
         self.field(left, 10, "Party suffix", self.party_suffix)
         ctk.CTkCheckBox(left, text="Replace old SteamID text inside decrypted payload", variable=self.rewrite_payload).grid(row=12, column=0, columnspan=2, sticky="w", padx=18, pady=(16, 6))
         ctk.CTkCheckBox(left, text="Create backup if output already exists", variable=self.copy_backup).grid(row=13, column=0, columnspan=2, sticky="w", padx=18, pady=6)
-        ctk.CTkButton(left, text="Transfer Save", height=52, corner_radius=14, fg_color=GREEN, hover_color="#16a34a", command=self.transfer).grid(row=14, column=0, columnspan=2, sticky="ew", padx=18, pady=20)
+        ctk.CTkButton(left, text="Transfer Save", height=52, corner_radius=16, fg_color=GREEN, hover_color="#16a34a", command=self.transfer).grid(row=14, column=0, columnspan=2, sticky="ew", padx=18, pady=20)
 
         right = self.card(page, row=0, column=1, sticky="nsew")
         right.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(right, text="Target account", font=("Segoe UI", 20, "bold"), text_color=TEXT).grid(row=0, column=0, sticky="w", padx=18, pady=(18, 8))
+        right.grid_rowconfigure(8, weight=1)
+        ctk.CTkLabel(right, text="Choose target account", font=("Segoe UI Variable Display", 21, "bold"), text_color=TEXT).grid(row=0, column=0, sticky="w", padx=18, pady=(18, 6))
+        ctk.CTkLabel(right, text="Local Steam accounts and profile lookups appear here.", text_color=MUTED, wraplength=330, justify="left").grid(row=1, column=0, sticky="w", padx=18, pady=(0, 12))
         self.selected_avatar = ctk.CTkLabel(right, text="")
-        self.selected_avatar.grid(row=1, column=0, sticky="w", padx=18, pady=(8, 4))
+        self.selected_avatar.grid(row=2, column=0, sticky="w", padx=18, pady=(4, 4))
         self.selected_name = ctk.CTkLabel(right, text="No account selected", font=("Segoe UI", 15, "bold"), justify="left", text_color=TEXT)
-        self.selected_name.grid(row=2, column=0, sticky="w", padx=18)
-        self.selected_id = ctk.CTkLabel(right, text="Pick one in Accounts", text_color=MUTED)
-        self.selected_id.grid(row=3, column=0, sticky="w", padx=18, pady=(0, 14))
-        ctk.CTkEntry(right, textvariable=self.profile_input, height=42, placeholder_text="Steam URL, vanity, or SteamID64").grid(row=4, column=0, sticky="ew", padx=18, pady=(18, 8))
-        ctk.CTkButton(right, text="Resolve Profile", height=42, corner_radius=12, command=self.resolve_profile).grid(row=5, column=0, sticky="ew", padx=18, pady=(0, 8))
-        ctk.CTkButton(right, text="Open Accounts", height=42, corner_radius=12, fg_color=CARD, hover_color="#334155", command=lambda: self.show_page("Accounts")).grid(row=6, column=0, sticky="ew", padx=18, pady=(0, 18))
-
-    def _build_accounts(self) -> None:
-        page = self.page_frames["Accounts"]
-        page.grid_columnconfigure(0, weight=1)
-        top = ctk.CTkFrame(page, fg_color=APP_BG)
-        top.grid(row=0, column=0, sticky="ew", pady=(0, 14))
-        top.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(top, text="Steam accounts found on this PC", text_color=MUTED).grid(row=0, column=0, sticky="w")
-        ctk.CTkButton(top, text="Refresh", width=140, command=self.refresh_accounts).grid(row=0, column=1, sticky="e")
-        self.accounts_scroll = ctk.CTkScrollableFrame(page, fg_color=APP_BG, corner_radius=0)
-        self.accounts_scroll.grid(row=1, column=0, sticky="nsew")
-        page.grid_rowconfigure(1, weight=1)
+        self.selected_name.grid(row=3, column=0, sticky="w", padx=18)
+        self.selected_id = ctk.CTkLabel(right, text="Pick one from the list below", text_color=MUTED)
+        self.selected_id.grid(row=4, column=0, sticky="w", padx=18, pady=(0, 14))
+        ctk.CTkEntry(right, textvariable=self.profile_input, height=42, corner_radius=14, placeholder_text="Steam URL, vanity, or SteamID64", fg_color="#0a1020", border_color="#22304a").grid(row=5, column=0, sticky="ew", padx=18, pady=(8, 8))
+        ctk.CTkButton(right, text="Resolve Profile", height=42, corner_radius=14, command=self.resolve_profile).grid(row=6, column=0, sticky="ew", padx=18, pady=(0, 8))
+        ctk.CTkButton(right, text="Refresh Local Accounts", height=40, corner_radius=14, fg_color=CARD, hover_color="#334155", command=self.refresh_accounts).grid(row=7, column=0, sticky="ew", padx=18, pady=(0, 12))
+        self.accounts_scroll = ctk.CTkScrollableFrame(right, fg_color="#0a1020", corner_radius=18)
+        self.accounts_scroll.grid(row=8, column=0, sticky="nsew", padx=18, pady=(0, 18))
 
     def _build_editor(self) -> None:
         page = self.page_frames["Editor"]
@@ -189,29 +181,38 @@ class App(ctk.CTk):
 
         top = self.card(page, row=0, column=0, sticky="ew", pady=(0, 16))
         top.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(top, text="Runtime inventory editor", font=("Segoe UI", 20, "bold"), text_color=TEXT).grid(row=0, column=0, sticky="w", padx=18, pady=(18, 4))
-        ctk.CTkLabel(top, text="Loads editable integer amounts from the decrypted runtimeInventory block. A backup is created before saving over an existing file.", text_color=MUTED).grid(row=1, column=0, sticky="w", padx=18, pady=(0, 16))
-        ctk.CTkButton(top, text="Load Current Save", height=42, command=self.load_editor_save).grid(row=0, column=1, rowspan=2, padx=18)
+        ctk.CTkLabel(top, text="Edit save values", font=("Segoe UI Variable Display", 22, "bold"), text_color=TEXT).grid(row=0, column=0, sticky="w", padx=20, pady=(20, 4))
+        ctk.CTkLabel(top, text="Editable runtimeInventory values are grouped below. Change amounts, then save an encrypted copy.", text_color=MUTED).grid(row=1, column=0, sticky="w", padx=20, pady=(0, 16))
+        ctk.CTkButton(top, text="Load Current Save", height=44, corner_radius=14, command=self.load_editor_save).grid(row=0, column=1, rowspan=2, padx=20)
 
         controls = ctk.CTkFrame(page, fg_color=APP_BG)
         controls.grid(row=1, column=0, sticky="nsew")
-        controls.grid_columnconfigure(0, weight=1)
-        controls.grid_rowconfigure(2, weight=1)
+        controls.grid_columnconfigure(0, minsize=240)
+        controls.grid_columnconfigure(1, weight=1)
+        controls.grid_rowconfigure(1, weight=1)
+
+        self.category_panel = ctk.CTkFrame(controls, fg_color=PANEL, corner_radius=22, border_width=1, border_color="#1f2a44")
+        self.category_panel.grid(row=0, column=0, rowspan=3, sticky="nsew", padx=(0, 16))
+        self.category_panel.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(self.category_panel, text="Categories", font=("Segoe UI", 16, "bold"), text_color=TEXT).grid(row=0, column=0, sticky="w", padx=16, pady=(16, 8))
+        self.category_list = ctk.CTkFrame(self.category_panel, fg_color="transparent")
+        self.category_list.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self.category_panel.grid_rowconfigure(1, weight=1)
+
         bar = ctk.CTkFrame(controls, fg_color=APP_BG)
-        bar.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        bar.grid(row=0, column=1, sticky="ew", pady=(0, 12))
         bar.grid_columnconfigure(0, weight=1)
-        ctk.CTkEntry(bar, textvariable=self.editor_search, placeholder_text="Search inventory, jokers, skins, quests...", height=40).grid(row=0, column=0, sticky="ew", padx=(0, 10))
+        ctk.CTkEntry(bar, textvariable=self.editor_search, placeholder_text="Search the selected category...", height=42, corner_radius=14, fg_color="#0a1020", border_color="#22304a").grid(row=0, column=0, sticky="ew")
         self.editor_search.trace_add("write", lambda *_: self.render_inventory())
-        self.category_menu = ctk.CTkOptionMenu(bar, variable=self.editor_category, values=["All"], command=lambda _v: self.render_inventory(), width=180)
-        self.category_menu.grid(row=0, column=1)
         self.editor_summary = ctk.CTkLabel(controls, text="Load a save to edit values.", text_color=MUTED)
-        self.editor_summary.grid(row=1, column=0, sticky="w", pady=(0, 8))
+        self.editor_summary.grid(row=1, column=1, sticky="w", pady=(0, 8))
         self.inventory_scroll = ctk.CTkScrollableFrame(controls, fg_color=APP_BG, corner_radius=0)
-        self.inventory_scroll.grid(row=2, column=0, sticky="nsew")
+        self.inventory_scroll.grid(row=2, column=1, sticky="nsew")
         bottom = ctk.CTkFrame(controls, fg_color=APP_BG)
-        bottom.grid(row=3, column=0, sticky="ew", pady=(14, 0))
+        bottom.grid(row=3, column=1, sticky="ew", pady=(14, 0))
         bottom.grid_columnconfigure(0, weight=1)
-        ctk.CTkButton(bottom, text="Save Edited Copy", height=46, fg_color=GREEN, hover_color="#16a34a", command=self.save_editor_copy).grid(row=0, column=1, padx=(10, 0))
+        ctk.CTkButton(bottom, text="Save Edited Copy", height=48, corner_radius=16, fg_color=GREEN, hover_color="#16a34a", command=self.save_editor_copy).grid(row=0, column=1, padx=(10, 0))
+        self.refresh_category_buttons()
 
     def _build_log(self) -> None:
         page = self.page_frames["Activity"]
@@ -264,13 +265,14 @@ class App(ctk.CTk):
             return
         for account in self.accounts:
             profile = self.profiles.get(account.steam_id, account)
-            card = ctk.CTkFrame(self.accounts_scroll, fg_color=PANEL, corner_radius=18, border_width=1, border_color="#243047")
-            card.pack(fill="x", pady=8, padx=4)
+            selected = account.steam_id == self.target_steamid.get().strip()
+            card = ctk.CTkFrame(self.accounts_scroll, fg_color="#111c31" if selected else PANEL, corner_radius=16, border_width=1, border_color=ACCENT if selected else "#1f2a44")
+            card.pack(fill="x", pady=6, padx=4)
             card.grid_columnconfigure(1, weight=1)
-            ctk.CTkLabel(card, text="", image=self.avatar_for(profile)).grid(row=0, column=0, rowspan=2, padx=16, pady=14)
-            ctk.CTkLabel(card, text=profile.persona_name or account.label.split(" - ")[0], font=("Segoe UI", 16, "bold"), text_color=TEXT).grid(row=0, column=1, sticky="sw", pady=(14, 0))
-            ctk.CTkLabel(card, text=f"{account.steam_id}   •   {account.source}", text_color=MUTED).grid(row=1, column=1, sticky="nw", pady=(0, 14))
-            ctk.CTkButton(card, text="Use", width=100, command=lambda a=account: self.use_account(a)).grid(row=0, column=2, rowspan=2, padx=16)
+            ctk.CTkLabel(card, text="", image=self.avatar_for(profile)).grid(row=0, column=0, rowspan=2, padx=12, pady=12)
+            ctk.CTkLabel(card, text=profile.persona_name or account.label.split(" - ")[0], font=("Segoe UI", 14, "bold"), text_color=TEXT).grid(row=0, column=1, sticky="sw", pady=(12, 0))
+            ctk.CTkLabel(card, text=account.steam_id, text_color=MUTED, font=("Segoe UI", 11)).grid(row=1, column=1, sticky="nw", pady=(0, 12))
+            ctk.CTkButton(card, text="Use", width=70, height=34, corner_radius=12, fg_color=ACCENT if selected else CARD, command=lambda a=account: self.use_account(a)).grid(row=0, column=2, rowspan=2, padx=12)
         self.update_selected_account()
 
     def avatar_for(self, account: core.SteamAccount) -> ctk.CTkImage:
@@ -297,6 +299,7 @@ class App(ctk.CTk):
         self.target_steamid.set(account.steam_id)
         self.set_default_output()
         self.update_selected_account()
+        self.render_accounts()
         self.show_page("Transfer")
 
     def update_selected_account(self) -> None:
@@ -310,7 +313,7 @@ class App(ctk.CTk):
             empty = core.SteamAccount("placeholder", "No account selected", "", "?", "")
             self.selected_avatar.configure(image=self.avatar_for(empty))
             self.selected_name.configure(text="No account selected")
-            self.selected_id.configure(text="Pick one in Accounts")
+            self.selected_id.configure(text="Pick one from the list below")
 
     def _profile_worker(self, steam_id: str) -> None:
         try:
@@ -378,6 +381,40 @@ class App(ctk.CTk):
         except Exception as exc:
             self.queue.put(("error", str(exc)))
 
+    def refresh_category_buttons(self) -> None:
+        if not hasattr(self, "category_list"):
+            return
+        for child in self.category_list.winfo_children():
+            child.destroy()
+        self.category_buttons.clear()
+        counts: dict[str, int] = {}
+        for entry in self.inventory_entries:
+            counts[entry.category] = counts.get(entry.category, 0) + 1
+        ordered = ["All", "Currency", "Items", "Fragments", "Jokers", "Skins", "Mounts", "Quests", "Music", "Map", "Other"]
+        cats = [cat for cat in ordered if cat == "All" or counts.get(cat, 0)]
+        if not cats:
+            cats = ["All"]
+        for row, cat in enumerate(cats):
+            count = len(self.inventory_entries) if cat == "All" else counts.get(cat, 0)
+            button = ctk.CTkButton(
+                self.category_list,
+                text=f"{cat}  {count}",
+                height=40,
+                corner_radius=13,
+                anchor="w",
+                fg_color=ACCENT if self.editor_category.get() == cat else "transparent",
+                hover_color=PANEL_2,
+                command=lambda c=cat: self.set_editor_category(c),
+            )
+            button.grid(row=row, column=0, sticky="ew", padx=4, pady=3)
+            self.category_buttons[cat] = button
+        self.category_list.grid_columnconfigure(0, weight=1)
+
+    def set_editor_category(self, category: str) -> None:
+        self.editor_category.set(category)
+        self.refresh_category_buttons()
+        self.render_inventory()
+
     def render_inventory(self) -> None:
         self.capture_visible_inventory()
         for child in self.inventory_scroll.winfo_children():
@@ -386,23 +423,53 @@ class App(ctk.CTk):
         search = self.editor_search.get().strip().lower()
         category = self.editor_category.get()
         filtered = [e for e in self.inventory_entries if (category == "All" or e.category == category) and (not search or search in e.name.lower())]
-        self.editor_summary.configure(text=f"{len(filtered)} shown / {len(self.inventory_entries)} editable runtimeInventory values")
+        label = category if category != "All" else "all categories"
+        self.editor_summary.configure(text=f"{len(filtered)} values shown in {label}")
+        if not filtered:
+            ctk.CTkLabel(self.inventory_scroll, text="No values match this filter.", text_color=MUTED).pack(anchor="w", pady=18, padx=8)
+            return
+        last_category = None
         for entry in filtered:
-            row = ctk.CTkFrame(self.inventory_scroll, fg_color=PANEL, corner_radius=14)
-            row.pack(fill="x", padx=4, pady=5)
-            row.grid_columnconfigure(1, weight=1)
-            ctk.CTkLabel(row, text=entry.category, width=95, text_color=MUTED).grid(row=0, column=0, padx=(14, 8), pady=10)
-            ctk.CTkLabel(row, text=entry.name, font=("Segoe UI", 14, "bold"), text_color=TEXT).grid(row=0, column=1, sticky="w", pady=10)
-            value = ctk.CTkEntry(row, width=140, height=36)
+            if category == "All" and entry.category != last_category:
+                last_category = entry.category
+                ctk.CTkLabel(self.inventory_scroll, text=entry.category.upper(), text_color=ACCENT, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=8, pady=(16, 4))
+            row = ctk.CTkFrame(self.inventory_scroll, fg_color=PANEL, corner_radius=14, border_width=1, border_color="#1f2a44")
+            row.pack(fill="x", padx=4, pady=4)
+            row.grid_columnconfigure(0, weight=1)
+            ctk.CTkLabel(row, text=self.pretty_name(entry.name), font=("Segoe UI", 14, "bold"), text_color=TEXT).grid(row=0, column=0, sticky="w", padx=14, pady=(10, 1))
+            ctk.CTkLabel(row, text=entry.name, font=("Segoe UI", 11), text_color=MUTED).grid(row=1, column=0, sticky="w", padx=14, pady=(0, 10))
+            value = ctk.CTkEntry(row, width=150, height=38, corner_radius=12, fg_color="#0a1020", border_color="#22304a")
             value.insert(0, str(self.inventory_values.get(entry.offset, entry.value)))
-            value.grid(row=0, column=2, padx=14, pady=10)
+            value.grid(row=0, column=1, rowspan=2, padx=14, pady=10)
             self.inventory_inputs[entry.offset] = value
+
+    def pretty_name(self, name: str) -> str:
+        words = []
+        current = ""
+        for char in name:
+            if current and char.isupper() and (not current[-1].isupper()):
+                words.append(current)
+                current = char
+            elif char == "_":
+                if current:
+                    words.append(current)
+                current = ""
+            else:
+                current += char
+        if current:
+            words.append(current)
+        if words and words[0].lower() in {"money", "item", "joker", "skin", "mount", "quest"}:
+            words[0] = words[0].capitalize()
+        return " ".join(word[:1].upper() + word[1:] for word in words) or name
 
     def capture_visible_inventory(self) -> None:
         for offset, widget in list(self.inventory_inputs.items()):
             raw = widget.get().strip()
             if raw:
-                self.inventory_values[offset] = int(raw)
+                try:
+                    self.inventory_values[offset] = int(raw)
+                except ValueError:
+                    pass
 
     def save_editor_copy(self) -> None:
         if self.plaintext is None:
@@ -455,9 +522,8 @@ class App(ctk.CTk):
                 elif kind == "editor_loaded":
                     self.plaintext, self.crypto_profile, self.loaded_steam_id, self.inventory_entries = payload
                     self.inventory_values = {entry.offset: entry.value for entry in self.inventory_entries}
-                    cats = ["All"] + sorted({e.category for e in self.inventory_entries})
-                    self.category_menu.configure(values=cats)
                     self.editor_category.set("All")
+                    self.refresh_category_buttons()
                     self.render_inventory()
                     self.status.configure(text="Save loaded")
                     self.show_page("Editor")

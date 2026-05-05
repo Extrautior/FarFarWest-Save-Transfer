@@ -9,11 +9,15 @@ The game save encryption appears to use the save filename / SteamID as part of i
 ## Features
 
 - Simple Windows UI
+- Modern tabbed interface for transfer, account selection, save inspection, and activity logs
 - Command-line mode for advanced users
 - Source SteamID detection from `.save` filename
 - Local Steam account discovery from `loginusers.vdf`
 - SteamID discovery from existing Far Far West save filenames
 - Steam profile URL / vanity name resolution
+- Steam account avatars where Steam Community profile data is available
+- Categorized Save Editor workspace for inventory, item progression, stats, loadouts, rewards, and maintenance
+- Safe decrypted save inspection with crypto profile, GVAS offset, size, and SteamID occurrence counts
 - Re-encrypts transferred saves for the target Steam account
 - Writes a new output file instead of overwriting the original
 
@@ -31,7 +35,7 @@ FarFarWestSaveTransferUI.exe
 
 1. Open `FarFarWestSaveTransferUI.exe`.
 2. Click **Browse** and choose the old account `.save`.
-3. Choose or enter the target SteamID64.
+3. Choose the target account from the Steam Accounts tab, or enter/resolve a SteamID64 manually.
 4. Click **Transfer Save**.
 5. Copy the generated `<target SteamID>.save` into the target account save folder.
 
@@ -83,6 +87,7 @@ python -m PyInstaller --onefile --windowed --name FarFarWestSaveTransferUI ffw_s
 - If your party composition differs, pass a custom suffix with `--party-suffix`.
 - If the game only needs re-encryption and does not like payload SteamID replacement, retry with `--no-payload-rewrite`.
 - The tool tries multiple AES-256-CBC key/IV layouts and validates the decrypted payload against the Unreal `GVAS` save header.
+- Save editing categories are present in the UI, but deep inventory/stat editing is intentionally not enabled until the game-specific GVAS schema is mapped safely.
 
 ## Legal
 

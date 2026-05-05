@@ -18,6 +18,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -47,6 +48,19 @@ class SteamAccount:
     steam_id: str
     label: str
     source: str
+    persona_name: str = ""
+    avatar_url: str = ""
+
+
+@dataclass(frozen=True)
+class SaveInspection:
+    source_steam_id: str
+    crypto_profile: str
+    plaintext_size: int
+    encrypted_size: int
+    steamid_ascii_count: int
+    steamid_utf16_count: int
+    gvas_offset: int
 
 
 def sha256(data: bytes) -> bytes:
@@ -209,6 +223,24 @@ def discover_steam_accounts() -> list[SteamAccount]:
     return accounts
 
 
+def fetch_steam_profile(steam_id: str, timeout: float = 8.0) -> SteamAccount:
+    if not re.fullmatch(r"\d{15,20}", steam_id):
+        raise TransferError("Steam profile lookup needs a SteamID64.")
+    url = f"https://steamcommunity.com/profiles/{steam_id}/?xml=1"
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            body = response.read().decode("utf-8", errors="ignore")
+    except urllib.error.URLError as exc:
+        raise TransferError(f"Could not contact Steam Community for {steam_id}: {exc}") from exc
+    try:
+        root = ET.fromstring(body)
+    except ET.ParseError as exc:
+        raise TransferError(f"Steam Community returned invalid profile XML for {steam_id}.") from exc
+    persona = root.findtext("steamID") or "Steam account"
+    avatar = root.findtext("avatarMedium") or root.findtext("avatarFull") or root.findtext("avatarIcon") or ""
+    return SteamAccount(steam_id, f"{persona} - {steam_id}", "steamcommunity.com", persona, avatar)
+
+
 def resolve_steam_id_from_text(text: str, timeout: float = 10.0) -> str:
     value = text.strip()
     if not value:
@@ -236,6 +268,26 @@ def resolve_steam_id_from_text(text: str, timeout: float = 10.0) -> str:
     if not match:
         raise TransferError(f"Steam Community did not return a SteamID64 for '{value}'.")
     return match.group(1)
+
+
+def inspect_save(path: str | Path, source_steam_id: str | None = None, party_suffix: str = DEFAULT_PARTY_SUFFIX) -> SaveInspection:
+    source_path = Path(path).expanduser().resolve()
+    if not source_path.exists():
+        raise TransferError(f"Save does not exist: {source_path}")
+    steam_id = source_steam_id or infer_steam_id(source_path)
+    ciphertext = source_path.read_bytes()
+    plaintext, profile = decrypt_with_detect(ciphertext, steam_id, party_suffix)
+    ascii_id = steam_id.encode("ascii")
+    utf16_id = steam_id.encode("utf-16le")
+    return SaveInspection(
+        source_steam_id=steam_id,
+        crypto_profile=profile.name,
+        plaintext_size=len(plaintext),
+        encrypted_size=len(ciphertext),
+        steamid_ascii_count=plaintext.count(ascii_id),
+        steamid_utf16_count=plaintext.count(utf16_id),
+        gvas_offset=plaintext.find(b"GVAS"),
+    )
 
 
 def decrypt_with_detect(ciphertext: bytes, source_steam_id: str, party_suffix: str) -> tuple[bytes, CryptoProfile]:

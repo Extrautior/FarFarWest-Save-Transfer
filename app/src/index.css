@@ -361,7 +361,7 @@ button {
 .editor-main {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: auto auto auto 1fr auto;
   gap: 12px;
 }
 
@@ -374,6 +374,65 @@ button {
 .editor-summary {
   color: #91a4c1;
   font-size: 13px;
+}
+
+.preset-panel {
+  padding: 16px;
+}
+
+.preset-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.preset-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.preset-list {
+  max-height: 210px;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+.preset-card {
+  min-height: 62px;
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  border-radius: 14px;
+  background: rgba(8, 13, 24, 0.58);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 14px;
+  cursor: pointer;
+}
+
+.preset-card:hover {
+  border-color: rgba(99, 102, 241, 0.55);
+  background: rgba(68, 76, 112, 0.24);
+}
+
+.preset-title,
+.preset-copy {
+  display: block;
+}
+
+.preset-title {
+  color: white;
+  font-weight: 800;
+}
+
+.preset-copy {
+  color: #91a4c1;
+  font-size: 12px;
+  margin-top: 2px;
 }
 
 .table-wrap {

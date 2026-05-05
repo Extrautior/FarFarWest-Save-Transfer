@@ -45,6 +45,14 @@ type WriteResult = {
   backupPath?: string | null
 }
 
+type Preset = {
+  id: string
+  title: string
+  description: string
+  appliesTo: (entry: InventoryEntry) => boolean
+  value: (entry: InventoryEntry) => number
+}
+
 function inferSteamId(path: string) {
   return path.split(/[\\/]/).pop()?.match(/^(\d{15,20})/)?.[1] ?? ''
 }
@@ -83,6 +91,7 @@ export default function App() {
   const [summary, setSummary] = useState<SaveSummary | null>(null)
   const [category, setCategory] = useState('All')
   const [search, setSearch] = useState('')
+  const [selectedPresets, setSelectedPresets] = useState<string[]>([])
 
   const log = (message: string) => setLogs((current) => [`[${nowStamp()}] ${message}`, ...current])
 
@@ -139,6 +148,61 @@ export default function App() {
       return categoryMatch && searchMatch
     })
   }, [category, inventory, search])
+
+  const presets = useMemo<Preset[]>(
+    () => [
+      {
+        id: 'max-money',
+        title: 'Max Money',
+        description: 'Sets money entries such as gold and souls to 999,999.',
+        appliesTo: (entry) => entry.name.startsWith('money'),
+        value: () => 999_999,
+      },
+      {
+        id: 'max-items',
+        title: 'Max Item Amounts',
+        description: 'Sets item and fragment inventory amounts to 999.',
+        appliesTo: (entry) => entry.category === 'Items' || entry.category === 'Fragments',
+        value: () => 999,
+      },
+      {
+        id: 'unlock-jokers',
+        title: 'Unlock Jokers',
+        description: 'Sets joker inventory entries to owned.',
+        appliesTo: (entry) => entry.category === 'Jokers',
+        value: () => 1,
+      },
+      {
+        id: 'unlock-skins',
+        title: 'Unlock Skins',
+        description: 'Sets skin inventory entries to owned.',
+        appliesTo: (entry) => entry.category === 'Skins',
+        value: () => 1,
+      },
+      {
+        id: 'unlock-mounts',
+        title: 'Unlock Mounts',
+        description: 'Sets mount inventory entries to owned.',
+        appliesTo: (entry) => entry.category === 'Mounts',
+        value: () => 1,
+      },
+      {
+        id: 'unlock-collectibles',
+        title: 'Unlock Music And Map',
+        description: 'Sets music disc and map entries to owned.',
+        appliesTo: (entry) => entry.category === 'Music' || entry.category === 'Map',
+        value: () => 1,
+      },
+      {
+        id: 'complete-quests',
+        title: 'Complete Quest Flags',
+        description: 'Sets quest-like inventory flags to complete.',
+        appliesTo: (entry) => entry.category === 'Quests',
+        value: () => 1,
+      },
+    ],
+    [],
+  )
 
   const pickSaveFile = async () => {
     const selected = await open({
@@ -294,6 +358,33 @@ export default function App() {
     setInventory((rows) => rows.map((row) => (row.offset === offset ? { ...row, value: parsed } : row)))
   }
 
+  const togglePreset = (id: string) => {
+    setSelectedPresets((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))
+  }
+
+  const applySelectedPresets = () => {
+    if (inventory.length === 0) {
+      log('Load a save before applying presets.')
+      return
+    }
+    const active = presets.filter((preset) => selectedPresets.includes(preset.id))
+    if (active.length === 0) {
+      log('Select at least one preset first.')
+      return
+    }
+    let changed = 0
+    const nextRows = inventory.map((row) => {
+        const preset = active.find((item) => item.appliesTo(row))
+        if (!preset) return row
+        const nextValue = preset.value(row)
+        if (nextValue === row.value) return row
+        changed += 1
+        return { ...row, value: nextValue }
+      })
+    setInventory(nextRows)
+    log(`Applied ${active.length} preset(s) to ${changed} value(s). Save the edited copy to write them.`)
+  }
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -418,6 +509,12 @@ export default function App() {
             setCategory={setCategory}
             search={search}
             setSearch={setSearch}
+            presets={presets}
+            selectedPresets={selectedPresets}
+            togglePreset={togglePreset}
+            selectAllPresets={() => setSelectedPresets(presets.map((preset) => preset.id))}
+            clearPresets={() => setSelectedPresets([])}
+            applySelectedPresets={applySelectedPresets}
             rows={filteredInventory}
             summary={summary}
             loadEditor={loadEditor}
@@ -442,6 +539,12 @@ function EditorPage({
   setCategory,
   search,
   setSearch,
+  presets,
+  selectedPresets,
+  togglePreset,
+  selectAllPresets,
+  clearPresets,
+  applySelectedPresets,
   rows,
   summary,
   loadEditor,
@@ -453,6 +556,12 @@ function EditorPage({
   setCategory: (category: string) => void
   search: string
   setSearch: (value: string) => void
+  presets: Preset[]
+  selectedPresets: string[]
+  togglePreset: (id: string) => void
+  selectAllPresets: () => void
+  clearPresets: () => void
+  applySelectedPresets: () => void
   rows: InventoryEntry[]
   summary: SaveSummary | null
   loadEditor: () => void
@@ -495,6 +604,31 @@ function EditorPage({
             </div>
           </div>
           <button className="button primary" onClick={loadEditor}>Load Current Save</button>
+        </div>
+
+        <div className="panel preset-panel">
+          <div className="preset-heading">
+            <div>
+              <h2 className="panel-title">Presets</h2>
+              <div className="editor-summary">Tick what you want, apply it, then save an edited copy.</div>
+            </div>
+            <div className="preset-actions">
+              <button className="button primary" onClick={applySelectedPresets}>Apply Selected</button>
+              <button className="button" onClick={selectAllPresets}>Select All</button>
+              <button className="button" onClick={clearPresets}>Clear</button>
+            </div>
+          </div>
+          <div className="preset-list">
+            {presets.map((preset) => (
+              <label className="preset-card" key={preset.id}>
+                <input type="checkbox" checked={selectedPresets.includes(preset.id)} onChange={() => togglePreset(preset.id)} />
+                <span>
+                  <span className="preset-title">{preset.title}</span>
+                  <span className="preset-copy">{preset.description}</span>
+                </span>
+              </label>
+            ))}
+          </div>
         </div>
 
         <div className="resolve-row">

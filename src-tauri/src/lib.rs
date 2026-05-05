@@ -503,28 +503,50 @@ fn parse_runtime_inventory(plain: &[u8]) -> Vec<InventoryEntry> {
         .min()
         .unwrap_or(plain.len());
     let section = &plain[start..end];
-    let Ok(re) = regex::bytes::Regex::new(
-        r"(?s)name_2_.*?NameProperty\x00.*?([A-Za-z][A-Za-z0-9_]+)\x00.*?amount_5_.*?IntProperty\x00(.{9})(.{4})",
-    ) else {
-        return Vec::new();
-    };
     let mut entries = Vec::new();
-    for caps in re.captures_iter(section) {
-        let name = String::from_utf8_lossy(&caps[1]).to_string();
-        let offset = start + caps.get(3).unwrap().start();
-        if offset + 4 <= plain.len() {
-            let value = i32::from_le_bytes(plain[offset..offset + 4].try_into().unwrap());
-            if (-1_000_000_000..=1_000_000_000).contains(&value) {
-                entries.push(InventoryEntry {
-                    category: inventory_category(&name),
-                    name,
-                    value,
-                    offset,
-                });
+    let mut cursor = 0usize;
+    while let Some(relative_name_pos) = find_bytes(&section[cursor..], b"name_2_") {
+        let name_pos = cursor + relative_name_pos;
+        let next_name_pos = find_bytes(&section[name_pos + 1..], b"name_2_").map(|pos| name_pos + 1 + pos);
+        let record_end = next_name_pos.unwrap_or(section.len());
+        let record = &section[name_pos..record_end];
+        if let Some((name, amount_offset)) = parse_inventory_record(record) {
+            let offset = start + name_pos + amount_offset;
+            if offset + 4 <= plain.len() {
+                let value = i32::from_le_bytes(plain[offset..offset + 4].try_into().unwrap());
+                if (-1_000_000_000..=1_000_000_000).contains(&value) {
+                    entries.push(InventoryEntry {
+                        category: inventory_category(&name),
+                        name,
+                        value,
+                        offset,
+                    });
+                }
             }
         }
+        cursor = record_end;
     }
     entries
+}
+
+fn parse_inventory_record(record: &[u8]) -> Option<(String, usize)> {
+    let name_property = find_bytes(record, b"NameProperty\0")?;
+    let name_scan_start = name_property + b"NameProperty\0".len();
+    let name_start = find_ascii_identifier_start(&record[name_scan_start..])? + name_scan_start;
+    let name_end = record[name_start..].iter().position(|byte| *byte == 0)? + name_start;
+    let name = std::str::from_utf8(&record[name_start..name_end]).ok()?.to_string();
+    let amount_pos = find_bytes(&record[name_end..], b"amount_5_")? + name_end;
+    let int_property = find_bytes(&record[amount_pos..], b"IntProperty\0")? + amount_pos;
+    let value_offset = int_property + b"IntProperty\0".len() + 9;
+    if value_offset + 4 <= record.len() {
+        Some((name, value_offset))
+    } else {
+        None
+    }
+}
+
+fn find_ascii_identifier_start(bytes: &[u8]) -> Option<usize> {
+    bytes.iter().position(|byte| byte.is_ascii_alphabetic())
 }
 
 fn inventory_category(name: &str) -> String {
@@ -651,13 +673,15 @@ mod tests {
         let Some(save_dir) = save_dir() else {
             return;
         };
-        let Some(save) = fs::read_dir(save_dir)
+        let mut saves = fs::read_dir(save_dir)
             .ok()
             .into_iter()
             .flatten()
             .filter_map(Result::ok)
-            .map(|entry| entry.path())
-            .find(|path| infer_steam_id(path.to_string_lossy().as_ref()).is_some())
+            .filter(|entry| infer_steam_id(entry.path().to_string_lossy().as_ref()).is_some())
+            .collect::<Vec<_>>();
+        saves.sort_by_key(|entry| entry.metadata().and_then(|metadata| metadata.modified()).ok());
+        let Some(save) = saves.last().map(|entry| entry.path())
         else {
             return;
         };
@@ -666,7 +690,7 @@ mod tests {
         let summary = load_save(path.clone(), id.clone(), DEFAULT_PARTY_SUFFIX.to_string()).expect("local save should decrypt");
         let inventory = load_inventory(path, id, DEFAULT_PARTY_SUFFIX.to_string()).expect("local inventory should load");
         assert_eq!(summary.inventory_count, inventory.len());
-        assert!(inventory.len() >= 60, "local inventory should expose the full editable value set");
+        assert_eq!(inventory.len(), 65, "local inventory should match the legacy parser count");
         assert!(inventory.iter().any(|entry| entry.name.starts_with("money")), "money entries should be present");
     }
 }

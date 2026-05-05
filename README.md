@@ -1,6 +1,6 @@
 # Far Far West Save Transfer
 
-Windows utility for transferring **Far Far West** save files from one Steam account to another.
+Windows utility for transferring and editing **Far Far West** save files.
 
 The game save encryption appears to use the save filename / SteamID as part of its key material. This tool decrypts a source `.save`, optionally rewrites old SteamID text occurrences inside the payload, and re-encrypts the save for the destination SteamID.
 
@@ -8,7 +8,8 @@ The game save encryption appears to use the save filename / SteamID as part of i
 
 ## Features
 
-- Modern Windows-style UI built with CustomTkinter
+- Native Windows UI built with WPF / .NET
+- Fast virtualized editor grid for save values
 - Sidebar navigation for transfer, runtime inventory editing, and activity logs
 - Command-line mode for advanced users
 - Source SteamID detection from `.save` filename
@@ -31,12 +32,12 @@ Download the latest Windows build from the [Releases](https://github.com/Extraut
 Recommended file:
 
 ```text
-FarFarWestSaveTransferUI.exe
+FarFarWestSaveStudio.exe
 ```
 
 ## Transfer Usage
 
-1. Open `FarFarWestSaveTransferUI.exe`.
+1. Open `FarFarWestSaveStudio.exe`.
 2. Click **Browse** and choose the old account `.save`.
 3. Choose the target account from the Steam Accounts tab, or enter/resolve a SteamID64 manually.
 4. Click **Transfer Save**.
@@ -68,8 +69,9 @@ Requirements:
 
 - Windows
 - Python 3.11+
+- .NET SDK 9.0+ for the native WPF app
 
-Build both executables:
+Build the native WPF app and legacy Python builds:
 
 ```powershell
 .\build_release.ps1
@@ -81,6 +83,7 @@ Manual setup:
 python -m pip install -r requirements.txt
 python -m PyInstaller --onefile --name FarFarWestSaveTransfer ffw_save_transfer.py
 python -m PyInstaller --onefile --windowed --name FarFarWestSaveTransferUI ffw_save_transfer_gui.py
+dotnet publish src\FarFarWestSaveStudio\FarFarWestSaveStudio.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o dist\wpf
 ```
 
 ## Technical Notes

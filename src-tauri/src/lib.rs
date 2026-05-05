@@ -494,22 +494,23 @@ fn looks_like_save(plain: &[u8]) -> bool {
 }
 
 fn parse_runtime_inventory(plain: &[u8]) -> Vec<InventoryEntry> {
-    let text = String::from_utf8_lossy(plain);
-    let Some(start) = text.find("runtimeInventory") else {
+    let Some(start) = find_bytes(plain, b"runtimeInventory") else {
         return Vec::new();
     };
-    let end = ["challenge", "stats", "reward"]
+    let end = [b"challenge".as_slice(), b"stats".as_slice(), b"reward".as_slice()]
         .iter()
-        .filter_map(|token| text[start + 1..].find(token).map(|pos| start + 1 + pos))
+        .filter_map(|token| find_bytes(&plain[start + 1..], token).map(|pos| start + 1 + pos))
         .min()
-        .unwrap_or(text.len());
-    let section = &text[start..end];
-    let Ok(re) = Regex::new(r"(?s)name_2_.*?NameProperty\x00.*?([A-Za-z][A-Za-z0-9_]+)\x00.*?amount_5_.*?IntProperty\x00(.{9})(.{4})") else {
+        .unwrap_or(plain.len());
+    let section = &plain[start..end];
+    let Ok(re) = regex::bytes::Regex::new(
+        r"(?s)name_2_.*?NameProperty\x00.*?([A-Za-z][A-Za-z0-9_]+)\x00.*?amount_5_.*?IntProperty\x00(.{9})(.{4})",
+    ) else {
         return Vec::new();
     };
     let mut entries = Vec::new();
     for caps in re.captures_iter(section) {
-        let name = caps[1].to_string();
+        let name = String::from_utf8_lossy(&caps[1]).to_string();
         let offset = start + caps.get(3).unwrap().start();
         if offset + 4 <= plain.len() {
             let value = i32::from_le_bytes(plain[offset..offset + 4].try_into().unwrap());
@@ -665,6 +666,7 @@ mod tests {
         let summary = load_save(path.clone(), id.clone(), DEFAULT_PARTY_SUFFIX.to_string()).expect("local save should decrypt");
         let inventory = load_inventory(path, id, DEFAULT_PARTY_SUFFIX.to_string()).expect("local inventory should load");
         assert_eq!(summary.inventory_count, inventory.len());
-        assert!(!inventory.is_empty(), "local inventory should expose editable values");
+        assert!(inventory.len() >= 60, "local inventory should expose the full editable value set");
+        assert!(inventory.iter().any(|entry| entry.name.starts_with("money")), "money entries should be present");
     }
 }

@@ -1,6 +1,10 @@
 __pycache__/
 build/
 dist/
+bin/
+obj/
+**/bin/
+**/obj/
 *.spec
 *.pyc
 *.pyo

@@ -14,6 +14,7 @@ import hashlib
 import os
 import re
 import shutil
+import struct
 import sys
 import urllib.error
 import urllib.parse
@@ -61,6 +62,14 @@ class SaveInspection:
     steamid_ascii_count: int
     steamid_utf16_count: int
     gvas_offset: int
+
+
+@dataclass(frozen=True)
+class InventoryEntry:
+    name: str
+    value: int
+    offset: int
+    category: str
 
 
 def sha256(data: bytes) -> bytes:
@@ -270,13 +279,101 @@ def resolve_steam_id_from_text(text: str, timeout: float = 10.0) -> str:
     return match.group(1)
 
 
-def inspect_save(path: str | Path, source_steam_id: str | None = None, party_suffix: str = DEFAULT_PARTY_SUFFIX) -> SaveInspection:
+def decrypt_save_file(path: str | Path, source_steam_id: str | None = None, party_suffix: str = DEFAULT_PARTY_SUFFIX) -> tuple[bytes, CryptoProfile, str]:
     source_path = Path(path).expanduser().resolve()
     if not source_path.exists():
         raise TransferError(f"Save does not exist: {source_path}")
     steam_id = source_steam_id or infer_steam_id(source_path)
+    plaintext, profile = decrypt_with_detect(source_path.read_bytes(), steam_id, party_suffix)
+    return plaintext, profile, steam_id
+
+
+def encrypt_plaintext_for_steam_id(plaintext: bytes, steam_id: str, party_suffix: str, profile_name: str) -> bytes:
+    target_profile = next((p for p in crypto_profiles(steam_id, party_suffix) if p.name == profile_name), None)
+    if target_profile is None:
+        raise TransferError(f"Unknown crypto profile: {profile_name}")
+    key, iv = target_profile.derive(steam_id)
+    return aes_cbc_encrypt(plaintext, key, iv)
+
+
+def inventory_category(name: str) -> str:
+    if name.startswith("money"):
+        return "Currency"
+    if name.startswith("item") and "Fragment" in name:
+        return "Fragments"
+    if name.startswith("item"):
+        return "Items"
+    if name.startswith("joker"):
+        return "Jokers"
+    if name.startswith("skin"):
+        return "Skins"
+    if name.startswith("mount"):
+        return "Mounts"
+    if name.startswith("quest"):
+        return "Quests"
+    if name.startswith("musicDisc"):
+        return "Music"
+    if name.startswith("map"):
+        return "Map"
+    return "Other"
+
+
+def parse_runtime_inventory(plaintext: bytes) -> list[InventoryEntry]:
+    start = plaintext.find(b"runtimeInventory")
+    if start < 0:
+        return []
+    end_candidates = []
+    for token in (b"challenge", b"stats", b"reward"):
+        pos = plaintext.find(token, start + 1)
+        if pos > start:
+            end_candidates.append(pos)
+    end = min(end_candidates) if end_candidates else len(plaintext)
+    section = plaintext[start:end]
+    pattern = re.compile(
+        rb"name_2_.*?NameProperty\x00.*?([A-Za-z][A-Za-z0-9_]+)\x00"
+        rb".*?amount_5_.*?IntProperty\x00(.{9})(.{4})",
+        re.S,
+    )
+    entries: list[InventoryEntry] = []
+    for match in pattern.finditer(section):
+        name = match.group(1).decode("ascii", errors="ignore")
+        offset = start + match.start(3)
+        value = struct.unpack("<i", match.group(3))[0]
+        if -1_000_000_000 <= value <= 1_000_000_000:
+            entries.append(InventoryEntry(name, value, offset, inventory_category(name)))
+    return entries
+
+
+def write_inventory_values(plaintext: bytes, updates: dict[int, int]) -> bytes:
+    data = bytearray(plaintext)
+    for offset, value in updates.items():
+        if offset < 0 or offset + 4 > len(data):
+            raise TransferError(f"Invalid inventory offset: {offset}")
+        data[offset : offset + 4] = struct.pack("<i", int(value))
+    return bytes(data)
+
+
+def save_edited_plaintext(
+    output_save: str | Path,
+    plaintext: bytes,
+    steam_id: str,
+    party_suffix: str,
+    profile_name: str,
+    create_backup: bool = True,
+) -> Path:
+    output_path = Path(output_save).expanduser().resolve()
+    if create_backup and output_path.exists():
+        backup = output_path.with_name(f"{output_path.name}.backup_{datetime.now():%Y%m%d_%H%M%S}")
+        shutil.copy2(output_path, backup)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(encrypt_plaintext_for_steam_id(plaintext, steam_id, party_suffix, profile_name))
+    return output_path
+
+
+def inspect_save(path: str | Path, source_steam_id: str | None = None, party_suffix: str = DEFAULT_PARTY_SUFFIX) -> SaveInspection:
+    source_path = Path(path).expanduser().resolve()
+    plaintext, profile, steam_id = decrypt_save_file(source_path, source_steam_id, party_suffix)
     ciphertext = source_path.read_bytes()
-    plaintext, profile = decrypt_with_detect(ciphertext, steam_id, party_suffix)
     ascii_id = steam_id.encode("ascii")
     utf16_id = steam_id.encode("utf-16le")
     return SaveInspection(

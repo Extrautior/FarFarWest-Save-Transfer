@@ -1,6 +1,10 @@
 __pycache__/
 build/
 dist/
+app/dist/
+app/node_modules/
+src-tauri/gen/
+src-tauri/target/
 bin/
 obj/
 **/bin/

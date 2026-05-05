@@ -504,7 +504,9 @@ fn parse_runtime_inventory(plain: &[u8]) -> Vec<InventoryEntry> {
         .min()
         .unwrap_or(text.len());
     let section = &text[start..end];
-    let re = Regex::new(r"(?s)name_2_.*?NameProperty\0.*?([A-Za-z][A-Za-z0-9_]+)\0.*?amount_5_.*?IntProperty\0(.{9})(.{4})").unwrap();
+    let Ok(re) = Regex::new(r"(?s)name_2_.*?NameProperty\x00.*?([A-Za-z][A-Za-z0-9_]+)\x00.*?amount_5_.*?IntProperty\x00(.{9})(.{4})") else {
+        return Vec::new();
+    };
     let mut entries = Vec::new();
     for caps in re.captures_iter(section) {
         let name = caps[1].to_string();
@@ -641,5 +643,28 @@ mod tests {
     fn clean_xml_text_strips_cdata_wrappers() {
         assert_eq!(clean_xml_text("<![CDATA[Mongrel]]>"), "Mongrel");
         assert_eq!(clean_xml_text("https://example.com/avatar.jpg"), "https://example.com/avatar.jpg");
+    }
+
+    #[test]
+    fn local_save_load_does_not_panic_when_available() {
+        let Some(save_dir) = save_dir() else {
+            return;
+        };
+        let Some(save) = fs::read_dir(save_dir)
+            .ok()
+            .into_iter()
+            .flatten()
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .find(|path| infer_steam_id(path.to_string_lossy().as_ref()).is_some())
+        else {
+            return;
+        };
+        let path = save.to_string_lossy().to_string();
+        let id = infer_steam_id(&path);
+        let summary = load_save(path.clone(), id.clone(), DEFAULT_PARTY_SUFFIX.to_string()).expect("local save should decrypt");
+        let inventory = load_inventory(path, id, DEFAULT_PARTY_SUFFIX.to_string()).expect("local inventory should load");
+        assert_eq!(summary.inventory_count, inventory.len());
+        assert!(!inventory.is_empty(), "local inventory should expose editable values");
     }
 }

@@ -526,6 +526,8 @@ fn parse_runtime_inventory(plain: &[u8]) -> Vec<InventoryEntry> {
         }
         cursor = record_end;
     }
+    let mut seen_offsets = entries.iter().map(|entry| entry.offset).collect::<HashSet<_>>();
+    entries.extend(parse_raw_integer_properties(plain, &mut seen_offsets));
     entries
 }
 
@@ -570,6 +572,85 @@ fn inventory_category(name: &str) -> String {
         "Map"
     } else {
         "Other"
+    }
+    .to_string()
+}
+
+fn parse_raw_integer_properties(plain: &[u8], seen_offsets: &mut HashSet<usize>) -> Vec<InventoryEntry> {
+    let mut entries = Vec::new();
+    let mut cursor = 0usize;
+    while let Some(relative_pos) = find_bytes(&plain[cursor..], b"IntProperty\0") {
+        let property_pos = cursor + relative_pos;
+        let value_offset = property_pos + b"IntProperty\0".len() + 9;
+        cursor = property_pos + b"IntProperty\0".len();
+        if value_offset + 4 > plain.len() || !seen_offsets.insert(value_offset) {
+            continue;
+        }
+        let value = i32::from_le_bytes(plain[value_offset..value_offset + 4].try_into().unwrap());
+        if !(-1_000_000_000..=1_000_000_000).contains(&value) {
+            continue;
+        }
+        let Some(base_name) = previous_property_name(plain, property_pos) else {
+            continue;
+        };
+        let name = if entries.iter().any(|entry: &InventoryEntry| entry.name == base_name) {
+            format!("{base_name}@{value_offset}")
+        } else {
+            base_name
+        };
+        entries.push(InventoryEntry {
+            category: raw_integer_category(&name),
+            name,
+            value,
+            offset: value_offset,
+        });
+    }
+    entries
+}
+
+fn previous_property_name(plain: &[u8], before: usize) -> Option<String> {
+    let start = before.saturating_sub(160);
+    let window = &plain[start..before];
+    let mut candidates = Vec::new();
+    let mut i = 0usize;
+    while i < window.len() {
+        if window[i].is_ascii_alphabetic() {
+            let seq_start = i;
+            i += 1;
+            while i < window.len() && (window[i].is_ascii_alphanumeric() || window[i] == b'_') {
+                i += 1;
+            }
+            if i - seq_start >= 3 {
+                if let Ok(candidate) = std::str::from_utf8(&window[seq_start..i]) {
+                    if is_plausible_property_name(candidate) {
+                        candidates.push(candidate.to_string());
+                    }
+                }
+            }
+        } else {
+            i += 1;
+        }
+    }
+    candidates.pop()
+}
+
+fn is_plausible_property_name(value: &str) -> bool {
+    !matches!(
+        value,
+        "IntProperty" | "NameProperty" | "BoolProperty" | "FloatProperty" | "StrProperty" | "ArrayProperty" | "StructProperty" | "ObjectProperty"
+    ) && !value.ends_with("Property")
+}
+
+fn raw_integer_category(name: &str) -> String {
+    let lower = name.to_ascii_lowercase();
+    if name.starts_with("challenge") || lower.contains("challenge") {
+        "Challenges"
+    } else if name.starts_with("stat") || lower.contains("stat") || lower.contains("counter") {
+        "Stats"
+    } else if name.starts_with("level") || lower.contains("level") || lower.contains("xp") {
+        "Levels"
+    } else {
+        "Raw Integers"
     }
     .to_string()
 }
@@ -690,7 +771,8 @@ mod tests {
         let summary = load_save(path.clone(), id.clone(), DEFAULT_PARTY_SUFFIX.to_string()).expect("local save should decrypt");
         let inventory = load_inventory(path, id, DEFAULT_PARTY_SUFFIX.to_string()).expect("local inventory should load");
         assert_eq!(summary.inventory_count, inventory.len());
-        assert_eq!(inventory.len(), 65, "local inventory should match the legacy parser count");
+        assert!(inventory.len() >= 65, "local inventory should include runtime inventory plus any raw integer fields");
         assert!(inventory.iter().any(|entry| entry.name.starts_with("money")), "money entries should be present");
+        assert!(inventory.iter().any(|entry| entry.category == "Raw Integers"), "raw integer fields should be included");
     }
 }

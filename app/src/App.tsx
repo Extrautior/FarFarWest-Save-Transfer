@@ -134,7 +134,24 @@ export default function App() {
   const categories = useMemo(() => {
     const counts = new Map<string, number>()
     inventory.forEach((entry) => counts.set(entry.category, (counts.get(entry.category) ?? 0) + 1))
-    const preferred = ['Presets', 'All', 'Currency', 'Items', 'Fragments', 'Jokers', 'Skins', 'Mounts', 'Quests', 'Music', 'Map', 'Other']
+    const preferred = [
+      'Presets',
+      'All',
+      'Currency',
+      'Items',
+      'Fragments',
+      'Jokers',
+      'Skins',
+      'Mounts',
+      'Quests',
+      'Music',
+      'Map',
+      'Stats',
+      'Challenges',
+      'Levels',
+      'Raw Integers',
+      'Other',
+    ]
     return preferred
       .filter((item) => item === 'Presets' || item === 'All' || counts.has(item))
       .map((item) => ({
@@ -318,7 +335,7 @@ export default function App() {
       setCategory('All')
       setPage('Editor')
       setStatus('Save loaded')
-      log(`Loaded ${rows.length} runtimeInventory values via ${saveSummary.cryptoProfile}.`)
+      log(`Loaded ${rows.length} editable integer value(s) via ${saveSummary.cryptoProfile}.`)
     } catch (error) {
       setStatus('Error')
       log(`Load failed: ${String(error)}`)
@@ -604,7 +621,7 @@ function EditorPage({
             <div className="editor-summary">
               {summary
                 ? `${summary.inventoryCount} values loaded • ${summary.cryptoProfile}`
-                : 'Load a save to edit currency, items, fragments, jokers, skins, quests, and similar values.'}
+                : 'Load a save to edit inventory values and raw integer fields found in the save.'}
             </div>
           </div>
           <button className="button primary" onClick={loadEditor}>Load Current Save</button>

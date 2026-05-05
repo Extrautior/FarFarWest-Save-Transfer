@@ -13,10 +13,16 @@
   -webkit-font-smoothing: antialiased;
 }
 
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+}
+
 body {
   margin: 0;
   min-width: 980px;
-  min-height: 100vh;
   overflow: hidden;
 }
 
@@ -29,12 +35,9 @@ button {
   border: 0;
 }
 
-#root {
-  min-height: 100vh;
-}
-
 .app {
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
   display: grid;
   grid-template-columns: 232px 1fr;
   background:
@@ -44,6 +47,7 @@ button {
 }
 
 .sidebar {
+  min-height: 0;
   background: rgba(7, 11, 20, 0.78);
   border-right: 1px solid rgba(148, 163, 184, 0.11);
   padding: 26px 18px;
@@ -104,10 +108,12 @@ button {
 
 .main {
   min-width: 0;
+  min-height: 0;
   padding: 26px 30px 28px;
   display: grid;
   grid-template-rows: auto 1fr;
   gap: 22px;
+  overflow: hidden;
 }
 
 .topbar {
@@ -136,7 +142,9 @@ button {
 }
 
 .page {
+  height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 .transfer-grid {
@@ -322,15 +330,19 @@ button {
 
 .editor-layout {
   height: 100%;
+  min-height: 0;
   display: grid;
   grid-template-columns: 220px 1fr;
   gap: 18px;
+  overflow: hidden;
 }
 
 .category-rail {
   min-height: 0;
+  max-height: 100%;
   padding: 14px;
   overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .category-title {
@@ -449,6 +461,8 @@ button {
 .table-wrap {
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   border: 1px solid rgba(148, 163, 184, 0.14);
   border-radius: 18px;
   background: rgba(8, 13, 24, 0.66);
@@ -526,4 +540,29 @@ button {
   border: 1px solid rgba(148, 163, 184, 0.14);
   font-family: "Cascadia Mono", ui-monospace, monospace;
   font-size: 12px;
+}
+
+.category-rail,
+.account-list,
+.preset-list,
+.table-wrap {
+  scrollbar-color: #64748b rgba(15, 23, 42, 0.7);
+  scrollbar-width: thin;
+}
+
+.category-rail::-webkit-scrollbar,
+.account-list::-webkit-scrollbar,
+.preset-list::-webkit-scrollbar,
+.table-wrap::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.category-rail::-webkit-scrollbar-thumb,
+.account-list::-webkit-scrollbar-thumb,
+.preset-list::-webkit-scrollbar-thumb,
+.table-wrap::-webkit-scrollbar-thumb {
+  background: #64748b;
+  border-radius: 999px;
+  border: 2px solid rgba(15, 23, 42, 0.9);
 }

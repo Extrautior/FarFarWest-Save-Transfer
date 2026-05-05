@@ -1,0 +1,8 @@
+__pycache__/
+build/
+*.spec
+*.pyc
+*.pyo
+*.log
+*.save
+*.transfer_backup_*

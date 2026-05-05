@@ -361,8 +361,12 @@ button {
 .editor-main {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto auto auto 1fr auto;
+  grid-template-rows: auto auto 1fr auto;
   gap: 12px;
+}
+
+.editor-main.presets-mode {
+  grid-template-rows: auto 1fr auto;
 }
 
 .editor-header {
@@ -378,6 +382,13 @@ button {
 
 .preset-panel {
   padding: 16px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.preset-page {
+  display: grid;
+  grid-template-rows: auto 1fr;
 }
 
 .preset-heading {
@@ -394,7 +405,7 @@ button {
 }
 
 .preset-list {
-  max-height: 210px;
+  min-height: 0;
   overflow: auto;
   display: grid;
   gap: 8px;

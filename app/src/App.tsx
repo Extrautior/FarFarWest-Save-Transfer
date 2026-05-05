@@ -134,16 +134,19 @@ export default function App() {
   const categories = useMemo(() => {
     const counts = new Map<string, number>()
     inventory.forEach((entry) => counts.set(entry.category, (counts.get(entry.category) ?? 0) + 1))
-    const preferred = ['All', 'Currency', 'Items', 'Fragments', 'Jokers', 'Skins', 'Mounts', 'Quests', 'Music', 'Map', 'Other']
+    const preferred = ['Presets', 'All', 'Currency', 'Items', 'Fragments', 'Jokers', 'Skins', 'Mounts', 'Quests', 'Music', 'Map', 'Other']
     return preferred
-      .filter((item) => item === 'All' || counts.has(item))
-      .map((item) => ({ name: item, count: item === 'All' ? inventory.length : counts.get(item)! }))
-  }, [inventory])
+      .filter((item) => item === 'Presets' || item === 'All' || counts.has(item))
+      .map((item) => ({
+        name: item,
+        count: item === 'Presets' ? selectedPresets.length : item === 'All' ? inventory.length : counts.get(item)!,
+      }))
+  }, [inventory, selectedPresets.length])
 
   const filteredInventory = useMemo(() => {
     const needle = search.trim().toLowerCase()
     return inventory.filter((entry) => {
-      const categoryMatch = category === 'All' || entry.category === category
+      const categoryMatch = category === 'All' || category === 'Presets' || entry.category === category
       const searchMatch = !needle || entry.name.toLowerCase().includes(needle) || prettyName(entry.name).toLowerCase().includes(needle)
       return categoryMatch && searchMatch
     })
@@ -568,6 +571,7 @@ function EditorPage({
   saveEdited: () => void
   updateInventoryValue: (offset: number, value: string) => void
 }) {
+  const showPresets = category === 'Presets'
   const parentRef = useRef<HTMLDivElement>(null)
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
@@ -593,7 +597,7 @@ function EditorPage({
         ))}
       </aside>
 
-      <div className="editor-main">
+      <div className={`editor-main ${showPresets ? 'presets-mode' : ''}`}>
         <div className="panel panel-pad editor-header">
           <div>
             <h2 className="panel-title">Runtime inventory editor</h2>
@@ -606,84 +610,88 @@ function EditorPage({
           <button className="button primary" onClick={loadEditor}>Load Current Save</button>
         </div>
 
-        <div className="panel preset-panel">
-          <div className="preset-heading">
-            <div>
-              <h2 className="panel-title">Presets</h2>
-              <div className="editor-summary">Tick what you want, apply it, then save an edited copy.</div>
+        {showPresets ? (
+          <div className="panel preset-panel preset-page">
+            <div className="preset-heading">
+              <div>
+                <h2 className="panel-title">Presets</h2>
+                <div className="editor-summary">Tick what you want, apply it, then save an edited copy.</div>
+              </div>
+              <div className="preset-actions">
+                <button className="button primary" onClick={applySelectedPresets}>Apply Selected</button>
+                <button className="button" onClick={selectAllPresets}>Select All</button>
+                <button className="button" onClick={clearPresets}>Clear</button>
+              </div>
             </div>
-            <div className="preset-actions">
-              <button className="button primary" onClick={applySelectedPresets}>Apply Selected</button>
-              <button className="button" onClick={selectAllPresets}>Select All</button>
-              <button className="button" onClick={clearPresets}>Clear</button>
+            <div className="preset-list">
+              {presets.map((preset) => (
+                <label className="preset-card" key={preset.id}>
+                  <input type="checkbox" checked={selectedPresets.includes(preset.id)} onChange={() => togglePreset(preset.id)} />
+                  <span>
+                    <span className="preset-title">{preset.title}</span>
+                    <span className="preset-copy">{preset.description}</span>
+                  </span>
+                </label>
+              ))}
             </div>
           </div>
-          <div className="preset-list">
-            {presets.map((preset) => (
-              <label className="preset-card" key={preset.id}>
-                <input type="checkbox" checked={selectedPresets.includes(preset.id)} onChange={() => togglePreset(preset.id)} />
-                <span>
-                  <span className="preset-title">{preset.title}</span>
-                  <span className="preset-copy">{preset.description}</span>
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
+        ) : (
+          <>
+            <div className="resolve-row">
+              <input
+                className="input"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search values..."
+              />
+              <button className="button" onClick={() => setSearch('')}>
+                <Search size={16} /> Clear
+              </button>
+            </div>
 
-        <div className="resolve-row">
-          <input
-            className="input"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search values..."
-          />
-          <button className="button" onClick={() => setSearch('')}>
-            <Search size={16} /> Clear
-          </button>
-        </div>
-
-        <div className="table-wrap" ref={parentRef}>
-          <div className="table-header">
-            <div>Name</div>
-            <div>Category</div>
-            <div>Value</div>
-          </div>
-          {rows.length === 0 ? (
-            <div className="empty">No values to show.</div>
-          ) : (
-            <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
-              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                const row = rows[virtualRow.index]
-                return (
-                  <div
-                    key={row.offset}
-                    className="table-row"
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
-                  >
-                    <div>
-                      <div className="entry-title">{prettyName(row.name)}</div>
-                      <div className="entry-raw">{row.name}</div>
-                    </div>
-                    <div className="category-badge">{row.category}</div>
-                    <input
-                      className="input value-input"
-                      type="number"
-                      value={row.value}
-                      onChange={(event) => updateInventoryValue(row.offset, event.target.value)}
-                    />
-                  </div>
-                )
-              })}
+            <div className="table-wrap" ref={parentRef}>
+              <div className="table-header">
+                <div>Name</div>
+                <div>Category</div>
+                <div>Value</div>
+              </div>
+              {rows.length === 0 ? (
+                <div className="empty">No values to show.</div>
+              ) : (
+                <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+                  {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const row = rows[virtualRow.index]
+                    return (
+                      <div
+                        key={row.offset}
+                        className="table-row"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                      >
+                        <div>
+                          <div className="entry-title">{prettyName(row.name)}</div>
+                          <div className="entry-raw">{row.name}</div>
+                        </div>
+                        <div className="category-badge">{row.category}</div>
+                        <input
+                          className="input value-input"
+                          type="number"
+                          value={row.value}
+                          onChange={(event) => updateInventoryValue(row.offset, event.target.value)}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
 
         <button className="button success" onClick={saveEdited}>Save Edited Copy</button>
       </div>

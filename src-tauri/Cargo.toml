@@ -1,6 +1,6 @@
 [package]
 name = "far-far-west-save-studio"
-version = "2.1.6"
+version = "2.1.8"
 description = "Far Far West Save Studio"
 authors = ["Extrautior"]
 edition = "2021"

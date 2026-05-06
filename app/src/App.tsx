@@ -99,6 +99,14 @@ export default function App() {
 
   const log = (message: string) => setLogs((current) => [`[${nowStamp()}] ${message}`, ...current])
 
+  const runWindowAction = async (label: string, action: () => Promise<void>) => {
+    try {
+      await action()
+    } catch (error) {
+      log(`${label} failed: ${String(error)}`)
+    }
+  }
+
   const enrichAccountProfiles = (baseAccounts: Account[]) => {
     baseAccounts.forEach((baseAccount) => {
       invoke<Account>('resolve_account', { input: baseAccount.steamId })
@@ -411,19 +419,21 @@ export default function App() {
 
   return (
     <div className="window-shell">
-      <div className="window-titlebar" data-tauri-drag-region>
-        <div className="window-brand" data-tauri-drag-region>
-          <span className="window-mark" data-tauri-drag-region>FW</span>
-          <span data-tauri-drag-region>Far Far West Save Studio</span>
+      <div className="window-titlebar" data-tauri-drag-region="true">
+        <div className="window-drag-region" data-tauri-drag-region="true">
+          <div className="window-brand" data-tauri-drag-region="true">
+            <span className="window-mark" data-tauri-drag-region="true">FW</span>
+            <span data-tauri-drag-region="true">Far Far West Save Studio</span>
+          </div>
         </div>
         <div className="window-controls">
-          <button className="window-control" aria-label="Minimize" onClick={() => getCurrentWindow().minimize()}>
+          <button className="window-control" aria-label="Minimize" onClick={() => runWindowAction('Minimize', () => getCurrentWindow().minimize())}>
             <Minus size={15} />
           </button>
-          <button className="window-control" aria-label="Maximize" onClick={() => getCurrentWindow().toggleMaximize()}>
+          <button className="window-control" aria-label="Maximize" onClick={() => runWindowAction('Maximize', () => getCurrentWindow().toggleMaximize())}>
             <Square size={13} />
           </button>
-          <button className="window-control close" aria-label="Close" onClick={() => getCurrentWindow().close()}>
+          <button className="window-control close" aria-label="Close" onClick={() => runWindowAction('Close', () => getCurrentWindow().close())}>
             <X size={16} />
           </button>
         </div>

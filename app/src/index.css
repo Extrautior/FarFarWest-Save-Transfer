@@ -55,6 +55,14 @@ button {
   user-select: none;
 }
 
+.window-drag-region {
+  height: 100%;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
 .window-brand {
   height: 100%;
   display: flex;

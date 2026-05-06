@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { open, save } from '@tauri-apps/plugin-dialog'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
@@ -7,9 +8,12 @@ import {
   ArrowRightLeft,
   Database,
   FolderOpen,
+  Minus,
   RefreshCw,
   Save,
   Search,
+  Square,
+  X,
 } from 'lucide-react'
 import './index.css'
 
@@ -406,7 +410,25 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className="window-shell">
+      <div className="window-titlebar" data-tauri-drag-region>
+        <div className="window-brand" data-tauri-drag-region>
+          <span className="window-mark" data-tauri-drag-region>FW</span>
+          <span data-tauri-drag-region>Far Far West Save Studio</span>
+        </div>
+        <div className="window-controls">
+          <button className="window-control" aria-label="Minimize" onClick={() => getCurrentWindow().minimize()}>
+            <Minus size={15} />
+          </button>
+          <button className="window-control" aria-label="Maximize" onClick={() => getCurrentWindow().toggleMaximize()}>
+            <Square size={13} />
+          </button>
+          <button className="window-control close" aria-label="Close" onClick={() => getCurrentWindow().close()}>
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+      <div className="app">
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-title">Far Far West</div>
@@ -549,6 +571,7 @@ export default function App() {
           </section>
         )}
       </main>
+      </div>
     </div>
   )
 }

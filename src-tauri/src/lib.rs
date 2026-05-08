@@ -101,6 +101,11 @@ fn resolve_account(input: String) -> Result<Account, String> {
 }
 
 #[tauri::command]
+fn default_save_folder() -> Option<String> {
+    save_dir().filter(|path| path.exists()).map(|path| path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
 fn load_save(path: String, steam_id: Option<String>, party_suffix: String) -> Result<SaveSummary, String> {
     let source_steam_id = steam_id.filter(|s| !s.trim().is_empty()).unwrap_or_else(|| infer_steam_id(&path).unwrap_or_default());
     if source_steam_id.is_empty() {
@@ -177,6 +182,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             discover_accounts,
             resolve_account,
+            default_save_folder,
             load_save,
             load_inventory,
             transfer_save,

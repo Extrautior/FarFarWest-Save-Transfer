@@ -96,6 +96,7 @@ export default function App() {
   const [category, setCategory] = useState('All')
   const [search, setSearch] = useState('')
   const [selectedPresets, setSelectedPresets] = useState<string[]>([])
+  const [saveFolder, setSaveFolder] = useState('')
 
   const log = (message: string) => setLogs((current) => [`[${nowStamp()}] ${message}`, ...current])
 
@@ -141,6 +142,9 @@ export default function App() {
 
   useEffect(() => {
     refreshAccounts()
+    invoke<string | null>('default_save_folder')
+      .then((path) => setSaveFolder(path ?? ''))
+      .catch(() => setSaveFolder(''))
   }, [])
 
   const categories = useMemo(() => {
@@ -239,6 +243,7 @@ export default function App() {
   const pickSaveFile = async () => {
     const selected = await open({
       multiple: false,
+      defaultPath: saveFolder || undefined,
       filters: [{ name: 'Far Far West save', extensions: ['save'] }],
     })
     return typeof selected === 'string' ? selected : ''

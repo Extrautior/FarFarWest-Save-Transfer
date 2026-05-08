@@ -40,13 +40,13 @@ type SaveSummary = {
   cryptoProfile: string
   encryptedSize: number
   plaintextSize: number
-  gvasOffset?: number | null
+  gvasOffset?: null | number
   inventoryCount: number
 }
 
 type WriteResult = {
   outputPath: string
-  backupPath?: string | null
+  backupPath?: null | string
 }
 
 type Preset = {
@@ -81,7 +81,7 @@ function nowStamp() {
 
 export default function App() {
   const [page, setPage] = useState<Page>('Transfer')
-  const [status, setStatus] = useState('Ready')
+  const [status, setStatus] = useState('READY')
   const [logs, setLogs] = useState<string[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [sourcePath, setSourcePath] = useState('')
@@ -126,15 +126,15 @@ export default function App() {
   }
 
   const refreshAccounts = async () => {
-    setStatus('Scanning')
+    setStatus('SCANNING')
     try {
       const result = await invoke<Account[]>('discover_accounts')
       setAccounts(result)
       enrichAccountProfiles(result)
       log(`Found ${result.length} Steam account candidate(s).`)
-      setStatus('Ready')
+      setStatus('READY')
     } catch (error) {
-      setStatus('Error')
+      setStatus('ERROR')
       log(`Account scan failed: ${String(error)}`)
     }
   }
@@ -274,15 +274,15 @@ export default function App() {
 
   const resolveAccount = async () => {
     if (!profileInput.trim()) return
-    setStatus('Resolving')
+    setStatus('RESOLVING')
     try {
       const account = await invoke<Account>('resolve_account', { input: profileInput })
       setAccounts((current) => [account, ...current.filter((item) => item.steamId !== account.steamId)])
       selectAccount(account)
       log(`Resolved Steam profile: ${account.name} (${account.steamId})`)
-      setStatus('Ready')
+      setStatus('READY')
     } catch (error) {
-      setStatus('Error')
+      setStatus('ERROR')
       log(`Resolve failed: ${String(error)}`)
     }
   }
@@ -294,7 +294,7 @@ export default function App() {
     }
     const sourceId = sourceSteamId || inferSteamId(sourcePath)
     const out = outputPath || defaultOutput(sourcePath, targetSteamId)
-    setStatus('Transferring')
+    setStatus('TRANSFERRING')
     try {
       const result = await invoke<WriteResult>('transfer_save', {
         request: {
@@ -307,11 +307,11 @@ export default function App() {
         },
       })
       setOutputPath(result.outputPath)
-      setStatus('Complete')
+      setStatus('COMPLETE')
       log(`Transferred save written: ${result.outputPath}`)
       if (result.backupPath) log(`Backup created: ${result.backupPath}`)
     } catch (error) {
-      setStatus('Error')
+      setStatus('ERROR')
       log(`Transfer failed: ${String(error)}`)
     }
   }
@@ -330,7 +330,7 @@ export default function App() {
       activeSteamId = applied.id
     }
     const sourceId = activeSteamId || inferSteamId(activePath)
-    setStatus('Loading')
+    setStatus('LOADING')
     try {
       const saveSummary = await invoke<SaveSummary>('load_save', {
         path: activePath,
@@ -346,10 +346,10 @@ export default function App() {
       setInventory(rows)
       setCategory('All')
       setPage('Editor')
-      setStatus('Save loaded')
+      setStatus('LOADED')
       log(`Loaded ${rows.length} editable integer value(s) via ${saveSummary.cryptoProfile}.`)
     } catch (error) {
-      setStatus('Error')
+      setStatus('ERROR')
       log(`Load failed: ${String(error)}`)
     }
   }
@@ -364,7 +364,7 @@ export default function App() {
       defaultPath: outputPath || sourcePath,
     })
     if (!selected) return
-    setStatus('Saving')
+    setStatus('SAVING')
     try {
       const result = await invoke<WriteResult>('save_inventory', {
         request: {
@@ -375,11 +375,11 @@ export default function App() {
           updates: inventory.map(({ offset, value }) => ({ offset, value })),
         },
       })
-      setStatus('Saved')
+      setStatus('SAVED')
       log(`Edited save written: ${result.outputPath}`)
       if (result.backupPath) log(`Backup created: ${result.backupPath}`)
     } catch (error) {
-      setStatus('Error')
+      setStatus('ERROR')
       log(`Save failed: ${String(error)}`)
     }
   }
@@ -428,159 +428,163 @@ export default function App() {
         </div>
         <div className="window-controls">
           <button className="window-control" aria-label="Minimize" onClick={() => runWindowAction('Minimize', () => getCurrentWindow().minimize())}>
-            <Minus size={15} />
+            <Minus size={14} />
           </button>
           <button className="window-control" aria-label="Maximize" onClick={() => runWindowAction('Maximize', () => getCurrentWindow().toggleMaximize())}>
-            <Square size={13} />
+            <Square size={11} />
           </button>
           <button className="window-control close" aria-label="Close" onClick={() => runWindowAction('Close', () => getCurrentWindow().close())}>
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
       </div>
+      
       <div className="app">
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-title">Far Far West</div>
-          <div className="brand-subtitle">Save Studio</div>
-        </div>
-        <nav className="nav">
-          <button className={`nav-button ${page === 'Transfer' ? 'active' : ''}`} onClick={() => setPage('Transfer')}>
-            <ArrowRightLeft size={18} /> Transfer
-          </button>
-          <button className={`nav-button ${page === 'Editor' ? 'active' : ''}`} onClick={() => setPage('Editor')}>
-            <Database size={18} /> Editor
-          </button>
-          <button className={`nav-button ${page === 'Activity' ? 'active' : ''}`} onClick={() => setPage('Activity')}>
-            <Activity size={18} /> Activity
-          </button>
-        </nav>
-        <div className="sidebar-note">Native Tauri app. Backups are created before overwrites.</div>
-      </aside>
+        <aside className="sidebar">
+          <div className="brand">
+            <div className="brand-title">FAR FAR WEST</div>
+            <div className="brand-subtitle">Save Studio</div>
+          </div>
+          <nav className="nav">
+            <button className={`nav-button ${page === 'Transfer' ? 'active' : ''}`} onClick={() => setPage('Transfer')}>
+              <ArrowRightLeft size={16} /> Transfer
+            </button>
+            <button className={`nav-button ${page === 'Editor' ? 'active' : ''}`} onClick={() => setPage('Editor')}>
+              <Database size={16} /> Editor
+            </button>
+            <button className={`nav-button ${page === 'Activity' ? 'active' : ''}`} onClick={() => setPage('Activity')}>
+              <Activity size={16} /> Activity
+            </button>
+          </nav>
+          <div className="sidebar-note">Native Tauri utility. Always creates backups before overwriting files.</div>
+        </aside>
 
-      <main className="main">
-        <header className="topbar">
-          <h1 className="title">{page === 'Editor' ? 'Save Editor' : page}</h1>
-          <div className="status-pill">{status}</div>
-        </header>
+        <main className="main">
+          <header className="topbar">
+            <h1 className="title">{page === 'Editor' ? 'Save Editor' : page}</h1>
+            <div className="status-pill">{status}</div>
+          </header>
 
-        {page === 'Transfer' && (
-          <section className="page transfer-grid">
-            <div className="panel panel-pad">
-              <h2 className="panel-title">Move a save to another Steam account</h2>
-              <p className="panel-copy">Pick a source save, choose a target account, and write a game-loadable encrypted save.</p>
+          {page === 'Transfer' && (
+            <section className="page transfer-grid">
+              <div className="panel panel-pad">
+                <h2 className="panel-title">Transfer Save</h2>
+                <p className="panel-copy">Migrate a save file to a different Steam account with correct encryption headers.</p>
 
-              <div className="form-grid">
-                <div className="field with-button">
-                  <label>Old save file</label>
-                  <input className="input" value={sourcePath} onChange={(e) => setSourcePath(e.target.value)} />
-                </div>
-                <button className="button primary" onClick={chooseSource}>
-                  <FolderOpen size={16} /> Browse
-                </button>
-
-                <div className="field with-button">
-                  <label>Source SteamID64</label>
-                  <input className="input" value={sourceSteamId} onChange={(e) => setSourceSteamId(e.target.value)} />
-                </div>
-                <button className="button" onClick={() => setSourceSteamId(inferSteamId(sourcePath))}>
-                  Detect
-                </button>
-
-                <div className="field">
-                  <label>Target SteamID64</label>
-                  <input className="input" value={targetSteamId} onChange={(e) => setTargetSteamId(e.target.value)} />
-                </div>
-
-                <div className="field with-button">
-                  <label>Output save file</label>
-                  <input className="input" value={outputPath} onChange={(e) => setOutputPath(e.target.value)} />
-                </div>
-                <button className="button" onClick={chooseOutput}>
-                  <Save size={16} /> Save As
-                </button>
-
-                <label className="toggle">
-                  <input type="checkbox" checked={rewritePayload} onChange={(e) => setRewritePayload(e.target.checked)} />
-                  Replace old SteamID text inside decrypted payload
-                </label>
-
-                <div className="field">
-                  <label>Party suffix</label>
-                  <input className="input" value={partySuffix} onChange={(e) => setPartySuffix(e.target.value)} />
-                </div>
-
-                <button className="button success" onClick={transfer}>
-                  Transfer Save
-                </button>
-                <button className="button" onClick={loadEditor}>
-                  Load in Editor
-                </button>
-              </div>
-            </div>
-
-            <div className="panel account-panel">
-              <div>
-                <h2 className="panel-title">Target account</h2>
-                <p className="panel-copy">Local Steam accounts, save-file IDs, and manual profile lookups.</p>
-              </div>
-              <div className="resolve-row">
-                <input className="input" placeholder="Steam URL, vanity, or SteamID64" value={profileInput} onChange={(e) => setProfileInput(e.target.value)} />
-                <button className="button primary" onClick={resolveAccount}>Resolve</button>
-              </div>
-              <div className="account-list">
-                <button className="button" onClick={refreshAccounts}>
-                  <RefreshCw size={15} /> Refresh accounts
-                </button>
-                {accounts.map((account) => (
-                  <button
-                    key={`${account.steamId}-${account.source}`}
-                    className={`account-card ${account.steamId === targetSteamId ? 'selected' : ''}`}
-                    onClick={() => selectAccount(account)}
-                  >
-                    {account.avatarUrl ? (
-                      <img className="avatar" src={account.avatarUrl} alt="" />
-                    ) : (
-                      <div className="avatar avatar-fallback">{account.name.slice(0, 1).toUpperCase()}</div>
-                    )}
-                    <span>
-                      <span className="account-name">{account.name}</span>
-                      <span className="account-id">{account.steamId}</span>
-                    </span>
+                <div className="form-grid">
+                  <div className="field">
+                    <label>Source Save File</label>
+                    <input className="input" value={sourcePath} onChange={(e) => setSourcePath(e.target.value)} spellCheck={false} />
+                  </div>
+                  <button className="button primary" onClick={chooseSource}>
+                    <FolderOpen size={15} /> Browse
                   </button>
-                ))}
+
+                  <div className="field">
+                    <label>Source SteamID64</label>
+                    <input className="input" value={sourceSteamId} onChange={(e) => setSourceSteamId(e.target.value)} spellCheck={false} />
+                  </div>
+                  <button className="button" onClick={() => setSourceSteamId(inferSteamId(sourcePath))}>
+                    Detect
+                  </button>
+
+                  <div className="field full">
+                    <label>Target SteamID64</label>
+                    <input className="input" value={targetSteamId} onChange={(e) => setTargetSteamId(e.target.value)} spellCheck={false} />
+                  </div>
+
+                  <div className="field">
+                    <label>Output Save Path</label>
+                    <input className="input" value={outputPath} onChange={(e) => setOutputPath(e.target.value)} spellCheck={false} />
+                  </div>
+                  <button className="button" onClick={chooseOutput}>
+                    <Save size={15} /> Save As
+                  </button>
+
+                  <label className="toggle">
+                    <input type="checkbox" checked={rewritePayload} onChange={(e) => setRewritePayload(e.target.checked)} />
+                    Rewrite SteamID in decrypted payload
+                  </label>
+
+                  <div className="field full">
+                    <label>Party Suffix</label>
+                    <input className="input" value={partySuffix} onChange={(e) => setPartySuffix(e.target.value)} spellCheck={false} />
+                  </div>
+
+                  <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', marginTop: '8px' }}>
+                    <button className="button success" style={{ flex: 1 }} onClick={transfer}>
+                      Transfer Save
+                    </button>
+                    <button className="button" style={{ flex: 1 }} onClick={loadEditor}>
+                      Load in Editor
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </section>
-        )}
 
-        {page === 'Editor' && (
-          <EditorPage
-            categories={categories}
-            category={category}
-            setCategory={setCategory}
-            search={search}
-            setSearch={setSearch}
-            presets={presets}
-            selectedPresets={selectedPresets}
-            togglePreset={togglePreset}
-            selectAllPresets={() => setSelectedPresets(presets.map((preset) => preset.id))}
-            clearPresets={() => setSelectedPresets([])}
-            applySelectedPresets={applySelectedPresets}
-            rows={filteredInventory}
-            summary={summary}
-            loadEditor={loadEditor}
-            saveEdited={saveEdited}
-            updateInventoryValue={updateInventoryValue}
-          />
-        )}
+              <div className="panel account-panel">
+                <h2 className="panel-title">Target Account</h2>
+                <p className="panel-copy">Search or select a local Steam profile.</p>
+                
+                <div className="resolve-row">
+                  <input className="input" placeholder="Steam URL or ID64..." value={profileInput} onChange={(e) => setProfileInput(e.target.value)} spellCheck={false} />
+                  <button className="button primary" onClick={resolveAccount}>Resolve</button>
+                </div>
 
-        {page === 'Activity' && (
-          <section className="page activity">
-            <textarea className="log" value={logs.join('\n')} readOnly />
-          </section>
-        )}
-      </main>
+                <div className="account-list">
+                  <button className="button" style={{ marginBottom: '4px' }} onClick={refreshAccounts}>
+                    <RefreshCw size={14} /> Refresh Local Accounts
+                  </button>
+                  {accounts.map((account) => (
+                    <button
+                      key={`${account.steamId}-${account.source}`}
+                      className={`account-card ${account.steamId === targetSteamId ? 'selected' : ''}`}
+                      onClick={() => selectAccount(account)}
+                    >
+                      {account.avatarUrl ? (
+                        <img className="avatar" src={account.avatarUrl} alt="" />
+                      ) : (
+                        <div className="avatar-fallback">{account.name.slice(0, 1).toUpperCase()}</div>
+                      )}
+                      <span>
+                        <span className="account-name">{account.name}</span>
+                        <span className="account-id">{account.steamId}</span>
+                      </span>
+                    </button>
+                  ))}
+                  {accounts.length === 0 && <div className="empty" style={{ padding: '20px' }}>No accounts found.</div>}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {page === 'Editor' && (
+            <EditorPage
+              categories={categories}
+              category={category}
+              setCategory={setCategory}
+              search={search}
+              setSearch={setSearch}
+              presets={presets}
+              selectedPresets={selectedPresets}
+              togglePreset={togglePreset}
+              selectAllPresets={() => setSelectedPresets(presets.map((preset) => preset.id))}
+              clearPresets={() => setSelectedPresets([])}
+              applySelectedPresets={applySelectedPresets}
+              rows={filteredInventory}
+              summary={summary}
+              loadEditor={loadEditor}
+              saveEdited={saveEdited}
+              updateInventoryValue={updateInventoryValue}
+            />
+          )}
+
+          {page === 'Activity' && (
+            <section className="page activity">
+              <textarea className="log" value={logs.join('\n')} readOnly spellCheck={false} />
+            </section>
+          )}
+        </main>
       </div>
     </div>
   )
@@ -626,7 +630,7 @@ function EditorPage({
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 58,
+    estimateSize: () => 48,
     overscan: 10,
   })
 
@@ -634,7 +638,7 @@ function EditorPage({
     <section className="page editor-layout">
       <aside className="panel category-rail">
         <div className="category-title">Categories</div>
-        {categories.length === 0 && <div className="empty">Load a save first.</div>}
+        {categories.length === 0 && <div className="empty">No save loaded.</div>}
         {categories.map((item) => (
           <button
             key={item.name}
@@ -642,35 +646,35 @@ function EditorPage({
             onClick={() => setCategory(item.name)}
           >
             <span>{item.name}</span>
-            <span>{item.count}</span>
+            <span style={{ opacity: 0.5, fontSize: '11px' }}>{item.count}</span>
           </button>
         ))}
       </aside>
 
-      <div className={`editor-main ${showPresets ? 'presets-mode' : ''}`}>
+      <div className="editor-main">
         <div className="panel panel-pad editor-header">
           <div>
-            <h2 className="panel-title">Runtime inventory editor</h2>
+            <h2 className="panel-title">Inventory Editor</h2>
             <div className="editor-summary">
               {summary
-                ? `${summary.inventoryCount} values loaded • ${summary.cryptoProfile}`
-                : 'Load a save to edit inventory values and raw integer fields found in the save.'}
+                ? `${summary.inventoryCount} values • ${summary.cryptoProfile}`
+                : 'Load a save to edit game values.'}
             </div>
           </div>
-          <button className="button primary" onClick={loadEditor}>Load Current Save</button>
+          <button className="button primary" onClick={loadEditor}>Load Save</button>
         </div>
 
         {showPresets ? (
-          <div className="panel preset-panel preset-page">
+          <div className="panel preset-panel" style={{ flex: 1, minHeight: 0 }}>
             <div className="preset-heading">
               <div>
-                <h2 className="panel-title">Presets</h2>
-                <div className="editor-summary">Tick what you want, apply it, then save an edited copy.</div>
+                <h2 className="panel-title">Automation Presets</h2>
+                <div className="editor-summary">Select presets to batch-update inventory values.</div>
               </div>
               <div className="preset-actions">
-                <button className="button primary" onClick={applySelectedPresets}>Apply Selected</button>
-                <button className="button" onClick={selectAllPresets}>Select All</button>
-                <button className="button" onClick={clearPresets}>Clear</button>
+                <button className="button primary" onClick={applySelectedPresets}>Apply</button>
+                <button className="button" onClick={selectAllPresets}>All</button>
+                <button className="button" onClick={clearPresets}>None</button>
               </div>
             </div>
             <div className="preset-list">
@@ -687,26 +691,27 @@ function EditorPage({
           </div>
         ) : (
           <>
-            <div className="resolve-row">
+            <div className="resolve-row" style={{ marginBottom: 0 }}>
               <input
                 className="input"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search values..."
+                placeholder="Search inventory..."
+                spellCheck={false}
               />
               <button className="button" onClick={() => setSearch('')}>
-                <Search size={16} /> Clear
+                <Search size={14} />
               </button>
             </div>
 
             <div className="table-wrap" ref={parentRef}>
               <div className="table-header">
-                <div>Name</div>
+                <div>Field Name</div>
                 <div>Category</div>
-                <div>Value</div>
+                <div style={{ textAlign: 'right' }}>Value</div>
               </div>
               {rows.length === 0 ? (
-                <div className="empty">No values to show.</div>
+                <div className="empty">No values found.</div>
               ) : (
                 <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
                   {rowVirtualizer.getVirtualItems().map((virtualRow) => {
@@ -723,11 +728,17 @@ function EditorPage({
                           transform: `translateY(${virtualRow.start}px)`,
                         }}
                       >
-                        <div>
-                          <div className="entry-title">{prettyName(row.name)}</div>
-                          <div className="entry-raw">{row.name}</div>
+                        <div style={{ overflow: 'hidden' }}>
+                          <div className="entry-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {prettyName(row.name)}
+                          </div>
+                          <div className="entry-raw" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {row.name}
+                          </div>
                         </div>
-                        <div className="category-badge">{row.category}</div>
+                        <div>
+                          <span className="category-badge">{row.category}</span>
+                        </div>
                         <input
                           className="input value-input"
                           type="number"
@@ -743,7 +754,9 @@ function EditorPage({
           </>
         )}
 
-        <button className="button success" onClick={saveEdited}>Save Edited Copy</button>
+        <button className="button success" style={{ height: '40px' }} onClick={saveEdited}>
+          <Save size={16} /> Save Edits
+        </button>
       </div>
     </section>
   )
